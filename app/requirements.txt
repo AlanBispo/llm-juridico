@@ -1,0 +1,23 @@
+# --- Framework Web ---
+fastapi==0.115.0
+uvicorn[standard]==0.31.0
+
+# --- Banco de Dados (Assíncrono) ---
+aiomysql==0.2.0
+# Necessário para autenticação segura no MySQL 8.0+
+cryptography==43.0.1
+
+# --- Inteligência Artificial ---
+google-generativeai==0.8.2
+
+# --- Gestão de Configuração e Ambiente ---
+# Para validação de dados e leitura de arquivos .env
+pydantic==2.9.2
+pydantic-settings==2.5.2
+python-dotenv==1.0.1
+
+# --- Utilitários ---
+# Para chamadas HTTP externas (caso precise de outras APIs além do Gemini)
+httpx==0.27.2
+
+google-generativeai>=0.8.0
