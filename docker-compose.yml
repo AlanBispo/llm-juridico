@@ -14,7 +14,7 @@ services:
       - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   app:
-    build: ./app
+    build: .
     container_name: fastapi_app
     restart: always
     ports:
@@ -24,6 +24,8 @@ services:
     depends_on:
       - db
     volumes:
-      - ./app:/app
+      - .:/app_context
+    working_dir: /app_context
     environment:
       DB_HOST: db
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
