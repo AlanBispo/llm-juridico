@@ -49,3 +49,14 @@ class ProcessoService:
                 )
 
         return await ProcessoRepository.update(db=db, db_processo=db_processo, processo_in=processo_in)
+    
+    @staticmethod
+    async def deletar_processo(db: AsyncSession, processo_id: int):
+        # Verifica se o processo existe
+        db_processo = await ProcessoRepository.get_by_id(db=db, processo_id=processo_id)
+        
+        if not db_processo:
+            raise HTTPException(status_code=404, detail="Processo não encontrado para exclusão.")
+        
+        # Chama o repositório para deletar do banco
+        await ProcessoRepository.delete(db=db, db_processo=db_processo)

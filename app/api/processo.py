@@ -24,3 +24,9 @@ async def obter_processo(processo_id: int, db: AsyncSession = Depends(get_db)):
 @router.put("/{processo_id}", response_model=ProcessoResponse, status_code=200)
 async def atualizar_processo(processo_id: int, processo_in: ProcessoUpdate, db: AsyncSession = Depends(get_db)):
     return await ProcessoService.atualizar_processo(db=db, processo_id=processo_id, processo_in=processo_in)
+
+@router.delete("/{processo_id}", status_code=204)
+async def deletar_processo(processo_id: int, db: AsyncSession = Depends(get_db)):
+    await ProcessoService.deletar_processo(db=db, processo_id=processo_id)
+    
+    return {"message": "Processo deletado com sucesso."}

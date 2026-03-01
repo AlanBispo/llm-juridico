@@ -63,3 +63,11 @@ class ProcessoRepository:
         await db.commit()
         await db.refresh(db_processo)
         return db_processo
+    
+    @staticmethod
+    async def delete(db: AsyncSession, db_processo: ProcessoModel) -> None:
+        """
+        Remove um processo do banco de dados.
+        """
+        await db.delete(db_processo)
+        await db.commit()
