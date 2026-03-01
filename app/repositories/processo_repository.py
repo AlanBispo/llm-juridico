@@ -29,3 +29,24 @@ class ProcessoRepository:
         await db.refresh(db_processo)
         
         return db_processo
+    
+    @staticmethod
+    async def get_all(db: AsyncSession, skip: int = 0, limit: int = 100):
+        stmt = select(ProcessoModel).offset(skip).limit(limit)
+        result = await db.execute(stmt)
+
+        return result.scalars().all()
+
+    @staticmethod
+    async def get_by_id(db: AsyncSession, processo_id: int) -> ProcessoModel | None:
+        stmt = select(ProcessoModel).where(ProcessoModel.id == processo_id)
+        result = await db.execute(stmt)
+
+        return result.scalars().first()
+
+    @staticmethod
+    async def get_by_numero(db: AsyncSession, numero: str) -> ProcessoModel | None:
+        stmt = select(ProcessoModel).where(ProcessoModel.numero == numero)
+        result = await db.execute(stmt)
+        
+        return result.scalars().first()

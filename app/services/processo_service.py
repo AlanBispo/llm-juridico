@@ -18,3 +18,16 @@ class ProcessoService:
         processo_criado = await ProcessoRepository.create(db=db, processo=processo_in)
         
         return processo_criado
+    
+    @staticmethod
+    async def listar_processos(db: AsyncSession, skip: int = 0, limit: int = 100):
+        return await ProcessoRepository.get_all(db=db, skip=skip, limit=limit)
+
+    @staticmethod
+    async def obter_processo_por_id(db: AsyncSession, processo_id: int):
+        processo = await ProcessoRepository.get_by_id(db=db, processo_id=processo_id)
+        
+        if not processo:
+            raise HTTPException(status_code=404, detail="Processo não encontrado.")
+            
+        return processo
