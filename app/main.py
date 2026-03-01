@@ -1,8 +1,8 @@
 from fastapi import FastAPI
-from app.api import triagem
+from app.api import api_router
 from fastapi.middleware.cors import CORSMiddleware
 
-app = FastAPI(title="Juridic Strategic API", version="2.0.0")
+app = FastAPI(title="Juridic Strategic API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -11,9 +11,5 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# Rota triagem
-app.include_router(triagem.router, prefix="/triagem", tags=["Jurídico"])
-
-@app.get("/")
-async def root():
-    return {"status": "online", "message": "API Jurídica Operacional"}
+# Inclui as rotas
+app.include_router(api_router)
