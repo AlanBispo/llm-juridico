@@ -1,20 +1,24 @@
-import aiomysql
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import declarative_base
 from app.core.config import settings
 
-class JuridicoDatabase:
-    def __init__(self):
-        self.config = {
-            'host': settings.DB_HOST,
-            'user': 'root',
-            'password': settings.MYSQL_ROOT_PASSWORD,
-            'db': settings.MYSQL_DATABASE
-        }
+# Conexão assíncrona
+engine = create_async_engine(settings.DATABASE_URL, echo=True)
 
-    async def obter_processo(self, processo_id: int):
-        conn = await aiomysql.connect(**self.config)
+# Sessões assíncronas
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+    autoflush=False
+)
+
+# Base para os modelos do SQLAlchemy
+Base = declarative_base()
+
+async def get_db():
+    async with AsyncSessionLocal() as session:
         try:
-            async with conn.cursor(aiomysql.DictCursor) as cursor:
-                await cursor.execute("SELECT * FROM processos_judiciais WHERE id = %s", (processo_id,))
-                return await cursor.fetchone()
+            yield session
         finally:
-            conn.close()
+            await session.close()
