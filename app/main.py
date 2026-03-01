@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.endpoints import triagem
+from app.api import triagem
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Juridic Strategic API", version="2.0.0")

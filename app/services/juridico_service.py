@@ -1,4 +1,4 @@
-from app.db.database import JuridicoDatabase
+from app.core.database import JuridicoDatabase
 from app.services.ai_service import JuridicoAIEngine
 
 class JuridicoService:
