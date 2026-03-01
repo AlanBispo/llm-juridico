@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, ConfigDict
 from app.models.processo_model import TipoProcesso
+from typing import Optional
 
 class ProcessoCreate(BaseModel):
     # Regex para validar exatamente o formato do CNJ
@@ -18,3 +19,14 @@ class ProcessoCreate(BaseModel):
 class ProcessoResponse(ProcessoCreate):
     id: int
     model_config = ConfigDict(from_attributes=True)
+
+class ProcessoUpdate(BaseModel):
+    numero: Optional[str] = Field(
+        None, 
+        pattern=r"^\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}$",
+        description="Número do processo no formato CNJ"
+    )
+    tipo: Optional[TipoProcesso] = Field(None, description="Tipo do processo")
+    resumo_peticao: Optional[str] = Field(None, min_length=20, description="Resumo dos fatos para análise")
+    valor_pedido: Optional[float] = Field(None, gt=0, description="Valor da causa em reais")
+    historico_cliente: Optional[str] = Field(None, min_length=5, max_length=255)

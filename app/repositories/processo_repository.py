@@ -1,7 +1,7 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.processo_model import ProcessoModel
-from app.schemas.processo_schema import ProcessoCreate
+from app.schemas.processo_schema import ProcessoCreate, ProcessoUpdate
 
 class ProcessoRepository:
     
@@ -48,5 +48,18 @@ class ProcessoRepository:
     async def get_by_numero(db: AsyncSession, numero: str) -> ProcessoModel | None:
         stmt = select(ProcessoModel).where(ProcessoModel.numero == numero)
         result = await db.execute(stmt)
-        
+
         return result.scalars().first()
+    
+    @staticmethod
+    async def update(db: AsyncSession, db_processo: ProcessoModel, processo_in: ProcessoUpdate) -> ProcessoModel:
+        # Pega apenas os campos que foram enviados no JSON da requisição
+        update_data = processo_in.model_dump(exclude_unset=True)
+        
+        for field, value in update_data.items():
+            setattr(db_processo, field, value)
+            
+        db.add(db_processo)
+        await db.commit()
+        await db.refresh(db_processo)
+        return db_processo
