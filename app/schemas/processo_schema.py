@@ -18,6 +18,7 @@ class ProcessoCreate(BaseModel):
 
 class ProcessoResponse(ProcessoCreate):
     id: int
+    tese_sugerida: str | None = None
     model_config = ConfigDict(from_attributes=True)
 
 class ProcessoUpdate(BaseModel):

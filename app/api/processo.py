@@ -30,3 +30,11 @@ async def deletar_processo(processo_id: int, db: AsyncSession = Depends(get_db))
     await ProcessoService.deletar_processo(db=db, processo_id=processo_id)
     
     return {"message": "Processo deletado com sucesso."}
+
+@router.post("/{processo_id}/tese", response_model=ProcessoResponse, status_code=200)
+async def gerar_tese(
+    processo_id: int, 
+    db: AsyncSession = Depends(get_db)
+):
+    processo_atualizado = await ProcessoService.gerar_tese_estrategica(db=db, processo_id=processo_id)
+    return processo_atualizado

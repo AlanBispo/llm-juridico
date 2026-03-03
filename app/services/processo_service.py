@@ -2,7 +2,11 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.processo_schema import ProcessoCreate, ProcessoUpdate
 from app.repositories.processo_repository import ProcessoRepository
+import google.generativeai as genai
+from app.core.config import settings
 
+MODEL_NAME = settings.MODEL_NAME
+genai.configure(api_key=settings.GEMINI_API_KEY)
 class ProcessoService:
     
     @staticmethod
@@ -60,3 +64,40 @@ class ProcessoService:
         
         # Chama o repositório para deletar do banco
         await ProcessoRepository.delete(db=db, db_processo=db_processo)
+
+    @staticmethod
+    async def gerar_tese_estrategica(db: AsyncSession, processo_id: int):
+        # busca o processo
+        processo = await ProcessoRepository.get_by_id(db, processo_id)
+        if not processo:
+            raise HTTPException(status_code=404, detail="Processo não encontrado.")
+
+        # verifica se a tese já foi gerada antes para economizar recursos
+        if processo.tese_sugerida:
+            return processo
+
+        # Prompt com o contexto do processo
+        prompt = f"""
+        Você é um advogado especialista e estrategista.
+        Analise os dados abaixo e formule uma tese jurídica sólida e direta ao ponto para o caso.
+        
+        Tipo da Ação: {processo.tipo.value}
+        Valor do Pedido: R$ {processo.valor_pedido}
+        Histórico do Cliente: {processo.historico_cliente}
+        Resumo dos Fatos: {processo.resumo_peticao}
+        
+        Forneça apenas a tese jurídica sugerida, sem introduções ou saudações.
+        """
+
+        try:
+            model = genai.GenerativeModel(MODEL_NAME)
+            resposta = model.generate_content(prompt)
+            tese_gerada = resposta.text
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Erro ao conectar com a IA: {str(e)}")
+
+        processo.tese_sugerida = tese_gerada
+        await db.commit()
+        await db.refresh(processo)
+
+        return processo

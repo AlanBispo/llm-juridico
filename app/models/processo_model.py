@@ -18,3 +18,4 @@ class ProcessoModel(Base):
     valor_pedido = Column(Numeric(10, 2), nullable=False, comment="Valor da causa ou do pedido principal em reais (R$).")
     historico_cliente = Column(String(255), nullable=False,comment="Histórico ou perfil do cliente para contextualizar a estratégia da IA.")
     numero = Column(String(50), unique=True, index=True, nullable=False, comment="Número do processo no padrão CNJ.")
+    tese_sugerida = Column(Text, nullable=True, comment="Tese estratégica gerada pela IA.")
