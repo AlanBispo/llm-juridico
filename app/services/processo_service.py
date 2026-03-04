@@ -2,11 +2,11 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.processo_schema import ProcessoCreate, ProcessoUpdate
 from app.repositories.processo_repository import ProcessoRepository
-import google.generativeai as genai
+
+from google import genai
 from app.core.config import settings
 
 MODEL_NAME = settings.MODEL_NAME
-genai.configure(api_key=settings.GEMINI_API_KEY)
 class ProcessoService:
     
     @staticmethod
@@ -90,9 +90,14 @@ class ProcessoService:
         """
 
         try:
-            model = genai.GenerativeModel(MODEL_NAME)
-            resposta = model.generate_content(prompt)
+            client = genai.Client(api_key=settings.GEMINI_API_KEY)
+            
+            resposta = client.models.generate_content(
+                model=MODEL_NAME,
+                contents=prompt
+            )
             tese_gerada = resposta.text
+            
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Erro ao conectar com a IA: {str(e)}")
 
