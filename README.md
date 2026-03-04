@@ -1,5 +1,7 @@
 # Juridic - Backend ⚖️
 
+## ⚙️ Projeto em cronstrução 
+
 Motor de inteligência para triagem e análise estratégica de processos judiciais utilizando IA Generativa (**Gemini 2.5**).
 ### OBS: Utilizando dados completamente fictícios, apenas para fins de estudo.
 
