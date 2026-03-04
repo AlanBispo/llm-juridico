@@ -7,7 +7,7 @@ from app.main import app
 from app.core.database import get_db, Base
 
 # URL do banco de testes
-TEST_DATABASE_URL = "postgresql+asyncpg://postgres:root@localhost:5432/juridico"
+TEST_DATABASE_URL = "postgresql+asyncpg://postgres:root@db:5432/juridico"
 
 engine_test = create_async_engine(TEST_DATABASE_URL, echo=False, poolclass=NullPool)
 
