@@ -4,6 +4,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str | None = None
     AI_PROVIDER: str = "gemini"
     GEMINI_MODEL_NAME: str = "gemini-2.5-flash"
+    GEMINI_FALLBACK_TO_LOCAL: bool = True
     LOCAL_LLM_BASE_URL: str = "http://localhost:11434"
     LOCAL_LLM_MODEL: str = "qwen2.5:7b-instruct"
     LOCAL_LLM_TIMEOUT: int = 120

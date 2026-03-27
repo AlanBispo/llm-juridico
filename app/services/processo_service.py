@@ -104,10 +104,21 @@ class ProcessoService:
                     model_name=model_name,
                 )
             else:
-                tese_gerada = ProcessoService._gerar_tese_gemini(
-                    prompt=prompt,
-                    model_name=model_name,
-                )
+                try:
+                    tese_gerada = ProcessoService._gerar_tese_gemini(
+                        prompt=prompt,
+                        model_name=model_name,
+                    )
+                except Exception as exc:
+                    if not ProcessoService.__fallback_local(exc):
+                        raise
+
+                    tese_gerada = await ProcessoService._gerar_tese_local(
+                        prompt=prompt,
+                        model_name=None,
+                    )
+        except HTTPException:
+            raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Erro ao conectar com a IA: {str(e)}")
 
@@ -132,6 +143,29 @@ class ProcessoService:
                     "AI_PROVIDER invalido. Use 'gemini' ou 'local' nas variaveis de ambiente."
                 ),
             ) from exc
+
+    @staticmethod
+    def __fallback_local(exc: Exception) -> bool:
+        if not settings.GEMINI_FALLBACK_TO_LOCAL:
+            return False
+
+        if isinstance(exc, HTTPException):
+            return exc.status_code in {429, 500, 502, 503, 504}
+
+        status_code = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+        if status_code in {429, 500, 502, 503, 504}:
+            return True
+
+        mensagem = str(exc).lower()
+        indicadores = (
+            "429",
+            "resource exhausted",
+            "rate limit",
+            "quota",
+            "too many requests",
+            "service unavailable",
+        )
+        return any(indicador in mensagem for indicador in indicadores)
 
     @staticmethod
     def _gerar_tese_gemini(prompt: str, model_name: str | None = None) -> str:

@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from fastapi import HTTPException
 
 
 payload_base = {
@@ -77,3 +78,42 @@ async def test_gerar_tese_com_provider_local(mock_gerar_tese_local, client):
     assert response_tese.status_code == 200
     assert response_tese.json()["tese_sugerida"] == mock_gerar_tese_local.return_value
     mock_gerar_tese_local.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+@patch(
+    "app.services.processo_service.ProcessoService._gerar_tese_local",
+    new_callable=AsyncMock,
+)
+@patch("app.services.processo_service.ProcessoService._gerar_tese_gemini")
+async def test_gerar_tese_fallback_de_gemini_para_local(
+    mock_gerar_tese_gemini,
+    mock_gerar_tese_local,
+    client,
+):
+    mock_gerar_tese_gemini.side_effect = HTTPException(
+        status_code=429,
+        detail="Too many requests",
+    )
+    mock_gerar_tese_local.return_value = "Tese gerada via fallback local."
+
+    payload = {
+        **payload_base,
+        "numero": "0000002-99.2026.8.26.0001",
+    }
+    response_proc = await client.post("/processos/", json=payload)
+    assert response_proc.status_code == 201
+    processo_id = response_proc.json()["id"]
+
+    response_tese = await client.post(
+        f"/processos/{processo_id}/tese",
+        params={"provider": "gemini", "model_name": "gemini-2.5-flash"},
+    )
+
+    assert response_tese.status_code == 200
+    assert response_tese.json()["tese_sugerida"] == mock_gerar_tese_local.return_value
+    mock_gerar_tese_gemini.assert_called_once()
+    mock_gerar_tese_local.assert_awaited_once_with(
+        prompt=mock_gerar_tese_gemini.call_args.kwargs["prompt"],
+        model_name=None,
+    )
