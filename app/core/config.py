@@ -1,8 +1,12 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    GEMINI_API_KEY: str
-    MODEL_NAME: str = "models/gemini-2.5-flash"
+    GEMINI_API_KEY: str | None = None
+    AI_PROVIDER: str = "gemini"
+    GEMINI_MODEL_NAME: str = "gemini-2.5-flash"
+    LOCAL_LLM_BASE_URL: str = "http://localhost:11434"
+    LOCAL_LLM_MODEL: str = "qwen2.5:7b-instruct"
+    LOCAL_LLM_TIMEOUT: int = 120
     
     # Configurações do PostgreSQL
     DB_HOST: str = "db"

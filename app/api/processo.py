@@ -2,7 +2,12 @@ from typing import List
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.schemas.processo_schema import ProcessoCreate, ProcessoResponse, ProcessoUpdate
+from app.schemas.processo_schema import (
+    ProcessoCreate,
+    ProcessoResponse,
+    ProcessoUpdate,
+    TeseGenerationParams,
+)
 from app.services.processo_service import ProcessoService
 
 router = APIRouter(prefix="/processos", tags=["Processos"])
@@ -33,8 +38,14 @@ async def deletar_processo(processo_id: int, db: AsyncSession = Depends(get_db))
 
 @router.post("/{processo_id}/tese", response_model=ProcessoResponse, status_code=200)
 async def gerar_tese(
-    processo_id: int, 
+    processo_id: int,
+    params: TeseGenerationParams = Depends(),
     db: AsyncSession = Depends(get_db)
 ):
-    processo_atualizado = await ProcessoService.gerar_tese_estrategica(db=db, processo_id=processo_id)
+    processo_atualizado = await ProcessoService.gerar_tese_estrategica(
+        db=db,
+        processo_id=processo_id,
+        provider=params.provider,
+        model_name=params.model_name,
+    )
     return processo_atualizado

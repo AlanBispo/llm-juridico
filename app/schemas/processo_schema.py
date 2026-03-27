@@ -1,6 +1,14 @@
-from pydantic import BaseModel, Field, ConfigDict
-from app.models.processo_model import TipoProcesso
 from typing import Optional
+from enum import Enum
+
+from pydantic import BaseModel, Field, ConfigDict
+
+from app.models.processo_model import TipoProcesso
+
+
+class TeseProvider(str, Enum):
+    GEMINI = "gemini"
+    LOCAL = "local"
 
 class ProcessoCreate(BaseModel):
     # Regex para validar exatamente o formato do CNJ
@@ -31,3 +39,16 @@ class ProcessoUpdate(BaseModel):
     resumo_peticao: Optional[str] = Field(None, min_length=20, description="Resumo dos fatos para análise")
     valor_pedido: Optional[float] = Field(None, gt=0, description="Valor da causa em reais")
     historico_cliente: Optional[str] = Field(None, min_length=5, max_length=255)
+
+
+class TeseGenerationParams(BaseModel):
+    provider: TeseProvider | None = Field(
+        default=None,
+        description="Provedor de IA para gerar a tese juridica."
+    )
+    model_name: str | None = Field(
+        default=None,
+        min_length=2,
+        max_length=120,
+        description="Nome opcional do modelo a ser usado no provedor selecionado."
+    )

@@ -1,12 +1,13 @@
+import httpx
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.schemas.processo_schema import ProcessoCreate, ProcessoUpdate
-from app.repositories.processo_repository import ProcessoRepository
 
 from google import genai
-from app.core.config import settings
 
-MODEL_NAME = settings.MODEL_NAME
+from app.core.config import settings
+from app.repositories.processo_repository import ProcessoRepository
+from app.schemas.processo_schema import ProcessoCreate, ProcessoUpdate, TeseProvider
+
 class ProcessoService:
     
     @staticmethod
@@ -66,7 +67,12 @@ class ProcessoService:
         await ProcessoRepository.delete(db=db, db_processo=db_processo)
 
     @staticmethod
-    async def gerar_tese_estrategica(db: AsyncSession, processo_id: int):
+    async def gerar_tese_estrategica(
+        db: AsyncSession,
+        processo_id: int,
+        provider: TeseProvider | None = None,
+        model_name: str | None = None,
+    ):
         # busca o processo
         processo = await ProcessoRepository.get_by_id(db, processo_id)
         if not processo:
@@ -89,15 +95,19 @@ class ProcessoService:
         Forneça apenas a tese jurídica sugerida, sem introduções ou saudações.
         """
 
+        provider_escolhido = ProcessoService._resolver_provider(provider)
+
         try:
-            client = genai.Client(api_key=settings.GEMINI_API_KEY)
-            
-            resposta = client.models.generate_content(
-                model=MODEL_NAME,
-                contents=prompt
-            )
-            tese_gerada = resposta.text
-            
+            if provider_escolhido == TeseProvider.LOCAL:
+                tese_gerada = await ProcessoService._gerar_tese_local(
+                    prompt=prompt,
+                    model_name=model_name,
+                )
+            else:
+                tese_gerada = ProcessoService._gerar_tese_gemini(
+                    prompt=prompt,
+                    model_name=model_name,
+                )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Erro ao conectar com a IA: {str(e)}")
 
@@ -106,3 +116,66 @@ class ProcessoService:
         await db.refresh(processo)
 
         return processo
+
+    @staticmethod
+    def _resolver_provider(provider: TeseProvider | None) -> TeseProvider:
+        if provider is not None:
+            return provider
+
+        provider_padrao = settings.AI_PROVIDER.strip().lower()
+        try:
+            return TeseProvider(provider_padrao)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=500,
+                detail=(
+                    "AI_PROVIDER invalido. Use 'gemini' ou 'local' nas variaveis de ambiente."
+                ),
+            ) from exc
+
+    @staticmethod
+    def _gerar_tese_gemini(prompt: str, model_name: str | None = None) -> str:
+        if not settings.GEMINI_API_KEY:
+            raise HTTPException(
+                status_code=500,
+                detail="GEMINI_API_KEY nao configurada para uso do provider gemini.",
+            )
+
+        client = genai.Client(api_key=settings.GEMINI_API_KEY)
+        resposta = client.models.generate_content(
+            model=model_name or settings.GEMINI_MODEL_NAME,
+            contents=prompt,
+        )
+
+        if not getattr(resposta, "text", None):
+            raise HTTPException(
+                status_code=500,
+                detail="O Gemini nao retornou texto para a tese sugerida.",
+            )
+
+        return resposta.text.strip()
+
+    @staticmethod
+    async def _gerar_tese_local(prompt: str, model_name: str | None = None) -> str:
+        payload = {
+            "model": model_name or settings.LOCAL_LLM_MODEL,
+            "prompt": prompt,
+            "stream": False,
+        }
+
+        async with httpx.AsyncClient(timeout=settings.LOCAL_LLM_TIMEOUT) as client:
+            resposta = await client.post(
+                f"{settings.LOCAL_LLM_BASE_URL.rstrip('/')}/api/generate",
+                json=payload,
+            )
+            resposta.raise_for_status()
+
+        dados = resposta.json()
+        tese_gerada = dados.get("response", "").strip()
+        if not tese_gerada:
+            raise HTTPException(
+                status_code=500,
+                detail="O provider local nao retornou texto para a tese sugerida.",
+            )
+
+        return tese_gerada
