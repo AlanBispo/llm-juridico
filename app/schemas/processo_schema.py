@@ -52,3 +52,7 @@ class TeseGenerationParams(BaseModel):
         max_length=120,
         description="Nome opcional do modelo a ser usado no provedor selecionado."
     )
+
+
+class TeseGenerationResponse(BaseModel):
+    tese_sugerida: str

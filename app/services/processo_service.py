@@ -9,10 +9,9 @@ from app.repositories.processo_repository import ProcessoRepository
 from app.schemas.processo_schema import ProcessoCreate, ProcessoUpdate, TeseProvider
 
 class ProcessoService:
-    
     @staticmethod
     async def criar_processo(db: AsyncSession, processo_in: ProcessoCreate):
-        processo_existente = await ProcessoRepository.buscar_por_numero(db, processo_in.numero)
+        processo_existente = await ProcessoRepository.get_by_number(db, processo_in.numero)
         
         if processo_existente:
             raise HTTPException(
@@ -46,7 +45,10 @@ class ProcessoService:
         
         # Verifica número CNJ duplicado.
         if processo_in.numero and processo_in.numero != db_processo.numero:
-            processo_existente = await ProcessoRepository.get_by_numero(db=db, numero=processo_in.numero)
+            processo_existente = await ProcessoRepository.get_by_number(
+                db=db,
+                number=processo_in.numero,
+            )
             if processo_existente:
                 raise HTTPException(
                     status_code=400, 
@@ -72,7 +74,7 @@ class ProcessoService:
         processo_id: int,
         provider: TeseProvider | None = None,
         model_name: str | None = None,
-    ):
+    ) -> str:
         # busca o processo
         processo = await ProcessoRepository.get_by_id(db, processo_id)
         if not processo:
@@ -80,7 +82,7 @@ class ProcessoService:
 
         # verifica se a tese já foi gerada antes para economizar recursos
         if processo.tese_sugerida:
-            return processo
+            return processo.tese_sugerida
 
         # Prompt com o contexto do processo
         prompt = f"""
@@ -96,7 +98,6 @@ class ProcessoService:
         """
 
         provider_escolhido = ProcessoService._resolver_provider(provider)
-
         try:
             if provider_escolhido == TeseProvider.LOCAL:
                 tese_gerada = await ProcessoService._gerar_tese_local(
@@ -121,12 +122,13 @@ class ProcessoService:
             raise
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Erro ao conectar com a IA: {str(e)}")
-
-        processo.tese_sugerida = tese_gerada
-        await db.commit()
-        await db.refresh(processo)
-
-        return processo
+        
+        await ProcessoRepository.save_tese_sugerida(
+            db=db,
+            db_processo=processo,
+            tese_sugerida=tese_gerada,
+        )
+        return tese_gerada
 
     @staticmethod
     def _resolver_provider(provider: TeseProvider | None) -> TeseProvider:

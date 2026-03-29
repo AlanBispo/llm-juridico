@@ -7,6 +7,7 @@ from app.schemas.processo_schema import (
     ProcessoResponse,
     ProcessoUpdate,
     TeseGenerationParams,
+    TeseGenerationResponse,
 )
 from app.services.processo_service import ProcessoService
 
@@ -36,16 +37,16 @@ async def deletar_processo(processo_id: int, db: AsyncSession = Depends(get_db))
     
     return {"message": "Processo deletado com sucesso."}
 
-@router.post("/{processo_id}/tese", response_model=ProcessoResponse, status_code=200)
+@router.post("/{processo_id}/tese", response_model=TeseGenerationResponse, status_code=200)
 async def gerar_tese(
     processo_id: int,
     params: TeseGenerationParams = Depends(),
     db: AsyncSession = Depends(get_db)
 ):
-    processo_atualizado = await ProcessoService.gerar_tese_estrategica(
+    tese_sugerida = await ProcessoService.gerar_tese_estrategica(
         db=db,
         processo_id=processo_id,
         provider=params.provider,
         model_name=params.model_name,
     )
-    return processo_atualizado
+    return {"tese_sugerida": tese_sugerida}

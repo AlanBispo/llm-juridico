@@ -6,21 +6,16 @@ from app.schemas.processo_schema import ProcessoCreate, ProcessoUpdate
 class ProcessoRepository:
     
     @staticmethod
-    async def buscar_por_numero(db: AsyncSession, numero: str) -> ProcessoModel | None:
-        """
-        Busca um processo judicial específico pelo número padrão CNJ.
-        Retorna o modelo do banco ou None se não existir.
-        """
-        stmt = select(ProcessoModel).where(ProcessoModel.numero == numero)
-        
-        resultado = await db.execute(stmt)
-        
-        return resultado.scalar_one_or_none()
+    async def get_by_number(db: AsyncSession, number: str) -> ProcessoModel | None:
+        stmt = select(ProcessoModel).where(ProcessoModel.numero == number)
+        result = await db.execute(stmt)
+
+        return result.scalars().first()
 
     @staticmethod
     async def create(db: AsyncSession, processo: ProcessoCreate) -> ProcessoModel:
         """
-        Insere um novo processo no banco de dados.
+        Insert a new process in the database.
         """
         db_processo = ProcessoModel(**processo.model_dump())
         
@@ -45,15 +40,8 @@ class ProcessoRepository:
         return result.scalars().first()
 
     @staticmethod
-    async def get_by_numero(db: AsyncSession, numero: str) -> ProcessoModel | None:
-        stmt = select(ProcessoModel).where(ProcessoModel.numero == numero)
-        result = await db.execute(stmt)
-
-        return result.scalars().first()
-    
-    @staticmethod
     async def update(db: AsyncSession, db_processo: ProcessoModel, processo_in: ProcessoUpdate) -> ProcessoModel:
-        # Pega apenas os campos que foram enviados no JSON da requisição
+        # Apply only fields present in the request payload.
         update_data = processo_in.model_dump(exclude_unset=True)
         
         for field, value in update_data.items():
@@ -63,11 +51,23 @@ class ProcessoRepository:
         await db.commit()
         await db.refresh(db_processo)
         return db_processo
+
+    @staticmethod
+    async def save_tese_sugerida(
+        db: AsyncSession,
+        db_processo: ProcessoModel,
+        tese_sugerida: str,
+    ) -> ProcessoModel:
+        db_processo.tese_sugerida = tese_sugerida
+        db.add(db_processo)
+        await db.commit()
+        await db.refresh(db_processo)
+        return db_processo
     
     @staticmethod
     async def delete(db: AsyncSession, db_processo: ProcessoModel) -> None:
         """
-        Remove um processo do banco de dados.
+        Remove a process from the database.
         """
         await db.delete(db_processo)
         await db.commit()

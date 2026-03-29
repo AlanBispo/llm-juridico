@@ -7,7 +7,7 @@ from app.core.config import settings
 from app.repositories.chat_repository import ChatRepository
 from app.repositories.processo_repository import ProcessoRepository
 
-MODEL_NAME = settings.MODEL_NAME
+MODEL_NAME = settings.GEMINI_MODEL_NAME
 
 class ChatService:
     

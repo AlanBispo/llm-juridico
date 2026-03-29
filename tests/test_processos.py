@@ -72,7 +72,7 @@ async def test_gerar_tese_com_provider_local(mock_gerar_tese_local, client):
 
     response_tese = await client.post(
         f"/processos/{processo_id}/tese",
-        params={"provider": "local", "model_name": "qwen2.5:7b-instruct"},
+        params={"provider": "local"},
     )
 
     assert response_tese.status_code == 200
@@ -107,7 +107,7 @@ async def test_gerar_tese_fallback_de_gemini_para_local(
 
     response_tese = await client.post(
         f"/processos/{processo_id}/tese",
-        params={"provider": "gemini", "model_name": "gemini-2.5-flash"},
+        params={"provider": "gemini"},
     )
 
     assert response_tese.status_code == 200
