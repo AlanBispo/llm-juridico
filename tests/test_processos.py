@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi import HTTPException
+from app.core.exceptions import ExternalServiceError
 
 
 payload_base = {
@@ -91,9 +91,9 @@ async def test_gerar_tese_fallback_de_gemini_para_local(
     mock_gerar_tese_local,
     client,
 ):
-    mock_gerar_tese_gemini.side_effect = HTTPException(
-        status_code=429,
+    mock_gerar_tese_gemini.side_effect = ExternalServiceError(
         detail="Too many requests",
+        status_code=429,
     )
     mock_gerar_tese_local.return_value = "Tese gerada via fallback local."
 

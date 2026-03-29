@@ -47,6 +47,7 @@ async def gerar_tese(
         db=db,
         processo_id=processo_id,
         provider=params.provider,
-        model_name=params.model_name,
+        model_name=params.model_name
+        force_regenerate=params.force_regenerate
     )
     return {"tese_sugerida": tese_sugerida}

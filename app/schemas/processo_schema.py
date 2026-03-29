@@ -50,7 +50,12 @@ class TeseGenerationParams(BaseModel):
         default=None,
         min_length=2,
         max_length=120,
-        description="Nome opcional do modelo a ser usado no provedor selecionado."
+        description="Nome opcional do modelo a ser usado no provedor selecionado.",
+    )
+    
+    force_regenerate: bool = Field(
+        default=False,
+        description="Quando true, ignora a tese salva e gera uma nova.",
     )
 
 

@@ -1,9 +1,9 @@
 from google import genai
 from google.genai import types
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException
 
 from app.core.config import settings
+from app.core.exceptions import ExternalServiceError, NotFoundError
 from app.repositories.chat_repository import ChatRepository
 from app.repositories.processo_repository import ProcessoRepository
 
@@ -22,7 +22,7 @@ class ChatService:
     async def enviar_mensagem(db: AsyncSession, processo_id: int, mensagem_usuario: str) -> str:
         processo = await ProcessoRepository.get_by_id(db, processo_id)
         if not processo:
-            raise HTTPException(status_code=404, detail="Processo não encontrado.")
+            raise NotFoundError(detail="Processo não encontrado.")
 
         historico_db = await ChatRepository.buscar_historico(db, processo_id)
         
@@ -55,7 +55,7 @@ class ChatService:
             texto_resposta = resposta_ia.text
             
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Erro ao processar resposta da IA: {str(e)}")
+            raise ExternalServiceError(detail=f"Erro ao processar resposta da IA: {str(e)}")
 
         await ChatRepository.salvar_mensagem(db, processo_id, role="user", conteudo=mensagem_usuario)
         await ChatRepository.salvar_mensagem(db, processo_id, role="model", conteudo=texto_resposta)

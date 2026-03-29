@@ -1,10 +1,16 @@
 import httpx
-from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from google import genai
 
 from app.core.config import settings
+from app.core.exceptions import (
+    ConfigurationError,
+    ConflictError,
+    DomainError,
+    ExternalServiceError,
+    NotFoundError,
+)
 from app.repositories.processo_repository import ProcessoRepository
 from app.schemas.processo_schema import ProcessoCreate, ProcessoUpdate, TeseProvider
 
@@ -14,8 +20,7 @@ class ProcessoService:
         processo_existente = await ProcessoRepository.get_by_number(db, processo_in.numero)
         
         if processo_existente:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+            raise ConflictError(
                 detail=f"Já existe um processo cadastrado com o número {processo_in.numero}."
             )
         
@@ -32,7 +37,7 @@ class ProcessoService:
         processo = await ProcessoRepository.get_by_id(db=db, processo_id=processo_id)
         
         if not processo:
-            raise HTTPException(status_code=404, detail="Processo não encontrado.")
+            raise NotFoundError(detail="Processo não encontrado.")
             
         return processo
     
@@ -41,7 +46,7 @@ class ProcessoService:
         # Verifica se o processo existe
         db_processo = await ProcessoRepository.get_by_id(db=db, processo_id=processo_id)
         if not db_processo:
-            raise HTTPException(status_code=404, detail="Processo não encontrado para atualização.")
+            raise NotFoundError(detail="Processo não encontrado para atualização.")
         
         # Verifica número CNJ duplicado.
         if processo_in.numero and processo_in.numero != db_processo.numero:
@@ -50,8 +55,7 @@ class ProcessoService:
                 number=processo_in.numero,
             )
             if processo_existente:
-                raise HTTPException(
-                    status_code=400, 
+                raise ConflictError(
                     detail="Já existe outro processo cadastrado com este novo número CNJ."
                 )
 
@@ -63,7 +67,7 @@ class ProcessoService:
         db_processo = await ProcessoRepository.get_by_id(db=db, processo_id=processo_id)
         
         if not db_processo:
-            raise HTTPException(status_code=404, detail="Processo não encontrado para exclusão.")
+            raise NotFoundError(detail="Processo não encontrado para exclusão.")
         
         # Chama o repositório para deletar do banco
         await ProcessoRepository.delete(db=db, db_processo=db_processo)
@@ -74,14 +78,15 @@ class ProcessoService:
         processo_id: int,
         provider: TeseProvider | None = None,
         model_name: str | None = None,
+        force_regenerate: bool = False,
     ) -> str:
         # busca o processo
         processo = await ProcessoRepository.get_by_id(db, processo_id)
         if not processo:
-            raise HTTPException(status_code=404, detail="Processo não encontrado.")
+            raise NotFoundError(detail="Processo não encontrado.")
 
         # verifica se a tese já foi gerada antes para economizar recursos
-        if processo.tese_sugerida:
+        if processo.tese_sugerida and not force_regenerate:
             return processo.tese_sugerida
 
         # Prompt com o contexto do processo
@@ -118,10 +123,10 @@ class ProcessoService:
                         prompt=prompt,
                         model_name=None,
                     )
-        except HTTPException:
+        except DomainError:
             raise
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Erro ao conectar com a IA: {str(e)}")
+            raise ExternalServiceError(detail=f"Erro ao conectar com a IA: {str(e)}")
         
         await ProcessoRepository.save_tese_sugerida(
             db=db,
@@ -139,8 +144,7 @@ class ProcessoService:
         try:
             return TeseProvider(provider_padrao)
         except ValueError as exc:
-            raise HTTPException(
-                status_code=500,
+            raise ConfigurationError(
                 detail=(
                     "AI_PROVIDER invalido. Use 'gemini' ou 'local' nas variaveis de ambiente."
                 ),
@@ -151,7 +155,7 @@ class ProcessoService:
         if not settings.GEMINI_FALLBACK_TO_LOCAL:
             return False
 
-        if isinstance(exc, HTTPException):
+        if isinstance(exc, DomainError):
             return exc.status_code in {429, 500, 502, 503, 504}
 
         status_code = getattr(exc, "status_code", None) or getattr(exc, "code", None)
@@ -172,8 +176,7 @@ class ProcessoService:
     @staticmethod
     def _gerar_tese_gemini(prompt: str, model_name: str | None = None) -> str:
         if not settings.GEMINI_API_KEY:
-            raise HTTPException(
-                status_code=500,
+            raise ConfigurationError(
                 detail="GEMINI_API_KEY nao configurada para uso do provider gemini.",
             )
 
@@ -184,8 +187,7 @@ class ProcessoService:
         )
 
         if not getattr(resposta, "text", None):
-            raise HTTPException(
-                status_code=500,
+            raise ExternalServiceError(
                 detail="O Gemini nao retornou texto para a tese sugerida.",
             )
 
@@ -209,8 +211,7 @@ class ProcessoService:
         dados = resposta.json()
         tese_gerada = dados.get("response", "").strip()
         if not tese_gerada:
-            raise HTTPException(
-                status_code=500,
+            raise ExternalServiceError(
                 detail="O provider local nao retornou texto para a tese sugerida.",
             )
 
